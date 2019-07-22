@@ -1,0 +1,164 @@
+//Dominic Klusek		Lab#8 FCFS Algorithm
+//FCFC.c
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+typedef struct Program
+{
+	string programName;//program name
+	int serviceTime;//service time
+	int arrivalTime;//arrival time
+	int startTime;//start time 
+	int finishTime;//finish time
+	int turnAroundTime;//turnaround time
+	double normalizedTurnAroundTime;//normalizedturnaround time
+	int waitingTime;//waiting time
+};
+
+//global variables
+struct Program P[255];//array of Programs
+int readyQueue[255];//queue of Program indices
+
+int CPUTime = 0;//simulated CPU time
+int numProgs = 0;//number of programs
+int validProgs = 0;//hold number of programs whose arrivalTime is valid for current CPUTime
+int totalProgs = 0;//hold initial amount of programs, used for print function
+char *fileName;//character array to hold inputted fileName
+int tempArray[10];//temporary arrays for reading data from file
+char tempArray2[10];
+
+main(int argc, char *argv[]) {
+	FILE *fp;//pointer to FILE 
+	
+	if(argc != 1)//if filename was passed, store value
+	{
+		fileName = (char *)malloc(sizeof(char) * strlen(argv[1]));
+		strcpy(fileName, argv[1]);//copy inputted filename into variable
+	}
+	else
+	{
+		printf("Missing command line arguments.\n");
+		perror("No input file parameter passed.");
+		return EXIT_FAILURE;
+	}
+
+	fp = fopen(fileName, "r");//open input file
+	//if file opened, get data from file; otherwise, exit program
+	if (fp == NULL){
+		perror("Failed to open file.");
+		return EXIT_FAILURE;
+	}
+	else
+	{
+		getData(fp);
+	}
+	int i = 0;//counter variable	
+	totalProgs = numProgs;//store total number of programs
+	for (i = 0; i < totalProgs; i++)//store indices of all jobs from job queue into ready queue(Enqueue)
+		readyQueue[i] = i;
+	SortJobs();//call function to sort jobs in ready queue
+	while(numProgs > 0)
+		FCFS();
+	PrintData(totalProgs);//print data
+	fclose(fp);//close file buffer
+	free(fileName);
+}
+
+getData(FILE *fp)//get data from file
+{
+	while (fscanf(fp, "%s", tempArray2) != EOF)
+	{
+		P[numProgs].programName = tempArray2;
+
+		fscanf(fp, "%i", tempArray);
+		P[numProgs].arrivalTime = tempArray[0];
+
+		fscanf(fp, "%i", tempArray);
+		P[numProgs].serviceTime = tempArray[0];
+		numProgs++;
+	}
+}
+void FCFS()
+{
+	//only jobs in queue can be called on
+	int i = 0;
+	validProgs = 0;//reset number of valid
+
+	for (i = 0; i < numProgs; i++)//find out what programs are ready in queue
+	{
+		if (P[readyQueue[i]].arrivalTime <= CPUTime)
+		{
+			validProgs++;
+		}
+	}
+
+	if (validProgs > 0)//if there is a program in queue, run program and dequeue
+	{
+		RunProg(readyQueue[0]);//run shortest program
+		Dequeue(0);//remove index from queue
+	}
+	else//otherwise, increment CPUTime and run algorithm again
+	{
+		CPUTime++;
+	}
+}
+
+Dequeue(int jobNum)//dequeue function, which removes program from queue
+{
+	int i = jobNum;
+	for (i; i < totalProgs; i++)
+	{
+		readyQueue[i] = readyQueue[i + 1];
+	}
+	numProgs--;
+}
+
+RunProg(int jobNum)//run program function, which "runs" the program
+{
+	int remainingServiceTime = P[jobNum].serviceTime;//hold service time
+	P[jobNum].startTime = CPUTime;//record start time of program
+	while (remainingServiceTime > 0)//run program
+	{
+		CPUTime++;//increment CPUTime
+		remainingServiceTime--;//decrement remaining service time
+	}
+
+	//after program executes start storing and calculations
+	P[jobNum].finishTime = CPUTime;//store finish time
+	P[jobNum].turnAroundTime = abs(P[jobNum].finishTime - P[jobNum].arrivalTime);//calculate and store turn around time
+	P[jobNum].normalizedTurnAroundTime = (double)P[jobNum].turnAroundTime / P[jobNum].serviceTime;//calculate and store normalized turn around time
+	P[jobNum].waitingTime = abs(P[jobNum].turnAroundTime - P[jobNum].serviceTime);//calculate and store waiting time	
+}
+
+//printing function that only needs the number of total programs that have run
+PrintData(int i)
+{
+	FILE *pf;
+	pf = fopen("AlgorithmResults.txt", "w");
+	int j = 0;
+	fprintf(pf,"Program:\tArrival Time:\tService Time:\tStart Time:\tFinish Time:\tTurnaround:\tNTurnaround:\tWaiting:\t\n");
+	for (j; j < i; j++)
+	{
+		fprintf(pf,"%c\t\t%i\t\t%i\t\t%i\t\t%i\t\t%i\t\t%g\t\t%i\n", P[j].programName, P[j].arrivalTime, P[j].serviceTime, P[j].startTime, P[j].finishTime, P[j].turnAroundTime, P[j].normalizedTurnAroundTime, P[j].waitingTime);
+	}
+	fprintf(pf, "CPUTime: %i\n", CPUTime);
+	fclose(pf);
+}
+
+SortJobs()//sort function, which sorts the programs in file by arrival time
+{
+	int i = 0;//counter variable	
+	int j = 0;
+	for (i = 0; i < totalProgs; i++)//sort programs by arrival time
+	{
+		for (j = i; j>=1; j--)
+		{
+			if (P[readyQueue[j-1]].arrivalTime > P[readyQueue[j]].arrivalTime)
+			{
+				int swap = readyQueue[j-1];
+				readyQueue[j-1] = readyQueue[j];
+				readyQueue[j] = swap;
+			}
+		}
+	}
+}

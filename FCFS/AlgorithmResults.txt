@@ -1,0 +1,6 @@
+Program:	Arrival Time:	Service Time:	Start Time:	Finish Time:	Turnaround:	NTurnaround:		Waiting:	
+0		1		5		1		6		5		1.000000		0
+1		2		15		11		26		24		1.600000		9
+CPUTime: 31
+Number of Switches: 2
+Switch Time: 5
